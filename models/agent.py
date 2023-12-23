@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import datetime
+import math
 
 def print_progress_bar(iteration, limit):
     fill='█'
@@ -11,8 +12,7 @@ def print_progress_bar(iteration, limit):
     percent = ("{0:.1f}").format(100 * (iteration / float(limit)))
     filled_length = int(length * iteration // limit)
     bar = fill * filled_length + '-' * (length - filled_length)
-    sys.stdout.write(f'\r{prefix} |{bar}| {percent}% {suffix}', )
-    sys.stdout.flush()
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end='', flush=True)
 
 
 class rl_agent():
@@ -228,7 +228,7 @@ class rl_agent():
                 time_difference = end_time - start_time
                 processing_seconds = time_difference.total_seconds()
                 print(f'-- Processing Time: {processing_seconds} seconds')
-                self.env.plot_performance(episode, self.logs)  # still print the plot_performance even if not converge
+                # self.env.plot_performance(episode, self.logs)  # still print the plot_performance even if not converge
                 sys.exit(f'Cannot find shortest route within {num_episodes} episodes')
 
 

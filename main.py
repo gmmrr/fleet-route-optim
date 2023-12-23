@@ -1,8 +1,10 @@
 import os, sys
 import xml.etree.ElementTree as ET
+import math
 
 from models import environment
 from models import agent
+from models import fleet_environment
 from models import dijkstra
 
 def sumo_config():
@@ -73,45 +75,71 @@ if __name__ == '__main__':
 
 
     # 02 Configure network variables
-    network_file = './network_files/ncku_network.net.xml'  # download .osm and then netconvert to .net.xml, see more in "https://www.openstreetmap.org/" and "config.txt" is the netconvert config
-    tls = tls_from_tllxml('./network_files/ncku_network.tll.xml')  # tll.xml is exported from netedit
-    congestion = []  # can be defined, but if it is empty, env will randomly decide congested edges
-    start_node = "864831599"  # can be defined, the scope is the nodes in the network
-    end_node = "5739293224"
+    network_file = './network_files/ncku_network.net.xml'
+    tls = tls_from_tllxml('./network_files/ncku_network.tll.xml')
+    congestion_assigned = []  # can be defined, but if it is empty, env will randomly decide congested edges
 
     # 03 Initiate Environment
+    # ---------------------------
+    # Edit
+    # ---------------------------
+    num_vehicle = 3
+    evaluation = "time"
+    num_demands = 10
+    # ---------------------------
+    #
+    # ---------------------------
+
+    fleet_env = fleet_environment.traffic_env(
+        network_file = network_file,
+        congestion = congestion_assigned,
+        evaluation = evaluation,
+        congestion_level = "low",
+        num_vehicle = num_vehicle,
+        num_demands = num_demands,
+    )
+
+    congestion = congestion_assigned if congestion_assigned else fleet_env.get_congestion()
+
     env = environment.traffic_env(
         network_file = network_file,
         tls = tls,
         congestion = congestion,
-        evaluation = "time", # Type: "destination" | "time"
-        congestion_level = "low",  # Type: "low" | "medium" | "high", only applied if the congestion is not defined
+        evaluation = evaluation,
     )
 
 
-    # 04 Activate Agent
-    # -------------------
-    # Dijkstra Algorithm
-    # -------------------
-    # print(f"\nDijkstra Algorithm{'.' * 100}")
-    # Dijkstra = dijkstra.Dijkstra(env, start_node, end_node)
-    # node_path, edge_path = Dijkstra.search()
-    # env.plot_visualised_result(edge_path)
 
-    # -------------------
-    # Q_Learning Algorithm
-    # -------------------
-    # print(f"\nQ_Learning Algorithm{'.' * 100}")
-    # QLearning_agent = agent.Q_Learning(env, start_node, end_node)
-    # node_path, edge_path, episode, logs = QLearning_agent.train(5000, 5)  # limit of episodes, threshold to converge
-    # env.plot_performance(episode, logs)
-    # env.plot_visualised_result(edge_path)
+    # demand_node_path = []  # [num_demands]
+    # demand_edge_path = []  # [num_demands]
 
-    # -------------------
-    # SARSA Algorithm
-    # -------------------
-    print(f"\nSARSA Algorithm{'.' * 100}")
-    SARSA_agent = agent.SARSA(env, start_node, end_node)
-    node_path, edge_path, episode, logs = SARSA_agent.train(5000, 20)  # limit of episodes, threshold to converge
-    env.plot_performance(episode, logs)
-    env.plot_visualised_result(edge_path)
+    # 04 Activate agents
+    while not fleet_env.is_empty():
+        # get the next demand
+        start_node, end_node = fleet_env.update_demand_queue()
+        if start_node == [] or end_node == []:
+            print(f'Demand queue is empty now')
+            continue
+
+        # decide who to work
+        v_id = fleet_env.get_neerest_vehicle(start_node)
+        # if all vehicle working
+        if v_id == -1:
+            continue
+
+        # QLearning_agent = agent.Q_Learning(env, start_node, end_node)
+        # _, edge_path, _, _ = QLearning_agent.train(5000, 5)  # limit of episodes, threshold to converge
+
+        Dijkstra = dijkstra.Dijkstra(env, start_node, end_node)
+        _, edge_path = Dijkstra.search()
+
+
+        working_time = math.ceil(env.get_edge_time(edge_path))
+        fleet_env.set_vehicle_working(v_id, working_time)
+
+        # demand_node_path.append(node_path)
+        # demand_edge_path.append(edge_path)
+
+    print(f'\n-- Total time: {round(fleet_env.get_total_time()/60, 2)} min')
+    fleet_env.plot_gantt()
+    # fleet_env.plot_visualised_result(demand_node_path, demand_edge_path)

@@ -3,10 +3,9 @@ import sumolib
 import math
 import networkx as nx
 import matplotlib.pyplot as plt
-import random
 
 class traffic_env:
-    def __init__ (self, network_file, tls, congestion = [], evaluation = "", congestion_level = ""):
+    def __init__ (self, network_file, tls, congestion = [], evaluation = ""):
         # 1. Define network_file
         self.network_file = network_file  # read the file
 
@@ -25,28 +24,14 @@ class traffic_env:
 
 
         # 2. Define congestions edges with its original pattern
-        if congestion:  # if congestion is defined
-            self.congested_edges = [item[0] for item in congestion]
-            self.congestion_duration = [item[1] for item in congestion]  # the duration of so called "traffic jam"
+        self.congested_edges = [item[0] for item in congestion]
+        self.congestion_duration = [item[1] for item in congestion]  # the duration of so called "traffic jam"
 
-            for edge in self.congested_edges:  # make sure that all congested_edges are in the net
-                if edge not in self.edges:
-                    sys.exit(f'Error: Invalid congestion_edges {edge}')
-            # print(f'Congested Edges: {list(zip(self.congested_edges, self.congestion_duration))}')
-            # print(f'Congested/Total: {len(self.congested_edges)}/{len(self.edges)}')
-
-        else:  # if congestion is not defined, then set edges and its duration randomly
-            if congestion_level == "low":
-                traffic_level = 0.05  # 5% congested
-            elif congestion_level == "medium":
-                traffic_level = 0.10  # 10% congested
-            elif congestion_level == "high":
-                traffic_level = 0.20  # 20% congested
-            self.congested_edges = random.sample(self.edges, round(len(self.edges) * traffic_level))
-            self.congestion_duration = [random.randint(60, 120) for _ in range(len(self.congested_edges))]  # 1~2 min
-            # print(f'Congested Edges: {list(zip(self.congested_edges, self.congestion_duration))}')
-            # print(f'Congested/Total: {len(self.congested_edges)}/{len(self.edges)}')
-
+        for edge in self.congested_edges:  # make sure that all congested_edges are in the net
+            if edge not in self.edges:
+                sys.exit(f'Error: Invalid congestion_edges {edge}')
+        # print(f'Congested Edges: {list(zip(self.congested_edges, self.congestion_duration))}')
+        # print(f'Congested/Total: {len(self.congested_edges)}/{len(self.edges)}')
 
         # 3. Define evaluation type
         if evaluation not in ('distance', 'time'):

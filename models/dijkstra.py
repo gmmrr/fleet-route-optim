@@ -25,7 +25,7 @@ class Dijkstra:
 
     # main function in dijkstra
     def search(self):
-        print('Search Start...')
+        # print('Search Start...')
         start_time = datetime.datetime.now()
 
         self.reset()  # the initial state of the algorithm
@@ -69,15 +69,15 @@ class Dijkstra:
         time_difference = end_time - start_time
         processing_seconds = time_difference.total_seconds()  # get second rather than timedelta object
 
-        # --- results output ---
-        print('Search Completed...\n')
-        print(f'-- States: {node_path}\n')
-        print(f'-- Edges: {edge_path}\n')  # states is nodes actually
-        print(f'-- Processing Time: {processing_seconds} seconds')
+        # # --- results output ---
+        # print('Search Completed...\n')
+        # print(f'-- States: {node_path}\n')
+        # print(f'-- Edges: {edge_path}\n')  # states is nodes actually
+        # print(f'-- Processing Time: {processing_seconds} seconds')
 
-        if self.env.evaluation in ("time"):
-            print(f'-- Travelled Time: {round(( self.env.get_edge_time(edge_path) + self.env.get_tl_offset(edge_path) )/60, 2)} mins')
-        else:  # in ("distance")
-            print(f'-- Travelled Distance: {round(self.env.get_edge_distance(edge_path), 2)} m')
+        # if self.env.evaluation in ("time"):
+        #     print(f'-- Travelled Time: {round(( self.env.get_edge_time(edge_path) + self.env.get_tl_offset(edge_path) )/60, 2)} mins')
+        # else:  # in ("distance")
+        #     print(f'-- Travelled Distance: {round(self.env.get_edge_distance(edge_path), 2)} m')
 
         return node_path, edge_path
