@@ -106,11 +106,11 @@ $ python3 main.py
     # Hyperparameters for SARSA
     learning_rate = 0.9  # alpha
     discount_factor = 0.1  # gamma
-    exploration_rate = 0.05  # ratio of exploration and exploitation
+    exploration_rate = 0.1  # ratio of exploration and exploitation
    ```
    and we have
    ```python
-    reward_lst = [-100, -100, -100, 10, 100, -1]
+    reward_lst = [-50, -50, -30, 100, 50, -1]
    ```
    They are defined as ```[invalid_action_reward, dead_end_reward, loop_reward, completion_reward, bonus_reward, continue_reward]``` respectively.
 
