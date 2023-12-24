@@ -1,4 +1,5 @@
 # fleet-route-optim
+<img width="773" alt="Screenshot 2023-12-24 at 21 58 29" src="https://github.com/gmmrr/fleet-route-optim/assets/88712124/7364049a-68f3-47a9-9fa6-428fd3f912ea">
 
 ## Description
 This project aims to solve the route optimisation problem among vehicles in a fleet by reinforcement learning.<br>
@@ -21,6 +22,9 @@ These demands are consumed as below:<br>
 -- Total Time: 69.58 min
 -- Average Waiting Time: 0.58 min
 ```
+<br>
+
+The graph below the topic shows 10 of demands and how vehicles find their route, where yellow lines are congested edges.
 
 
 ## Project Scope
