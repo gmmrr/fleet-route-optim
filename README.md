@@ -22,9 +22,11 @@ These demands are consumed as below:<br>
 -- Total Time: 69.58 min
 -- Average Waiting Time: 0.58 min
 ```
-<br>
 
-The graph below the topic shows 10 of demands and how vehicles find their route, where yellow lines are congested edges.
+The graph below the topic section roughly shows 10 of demands and how vehicles find their route, where yellow lines are congested edges.<br>
+
+The graph below is the complete one:
+<img width="891" alt="Screenshot 2023-12-24 at 22 44 22" src="https://github.com/gmmrr/fleet-route-optim/assets/88712124/dd1421ee-df40-4880-8ee8-1b69051a2f33">
 
 
 ## Project Scope
