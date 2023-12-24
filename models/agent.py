@@ -1,19 +1,8 @@
 import numpy as np
 import sys
 import datetime
-import math
 
-def print_progress_bar(iteration, limit):
-    fill='█'
-    length = 50
-    prefix = 'Episodes: '
-    suffix = '(limit: ' + str(limit) + ')'
-
-    percent = ("{0:.1f}").format(100 * (iteration / float(limit)))
-    filled_length = int(length * iteration // limit)
-    bar = fill * filled_length + '-' * (length - filled_length)
-    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end='', flush=True)
-
+from utilities import progressbar
 
 class rl_agent():
     def __init__ (self, env, start_node, end_node, learning_rate, discount_factor, reward_lst):
@@ -143,7 +132,8 @@ class rl_agent():
         # Iterate through episodes
         for episode in range(num_episodes):
 
-            print_progress_bar(episode, num_episodes)
+            episode_bar = progressbar.ProgressBar(episode, num_episodes-1, "episodes: ", "(limit: " + str(num_episodes) + ")")
+            episode_bar.print()
 
             # Initialise state
             node_path = [self.env.start_node]

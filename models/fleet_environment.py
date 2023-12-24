@@ -3,23 +3,17 @@ import sumolib
 import networkx as nx
 import matplotlib.pyplot as plt
 import random
+import math
 
 from models import demand
 from models import dijkstra
 from models import environment
+from utilities import progressbar
 
-def print_progress_bar(iteration, limit, prefix, suffix):
-    fill='█'
-    length = 50
-
-    percent = ("{0:.1f}").format(100 * (iteration / float(limit)))
-    filled_length = int(length * iteration // limit)
-    bar = fill * filled_length + '-' * (length - filled_length)
-    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end='', flush=True)
 
 class traffic_env:
-    def __init__ (self, network_file, congestion = [], evaluation = "", congestion_level = "", num_vehicle = 20, num_demands = 200):
-        # 1. Define network_file
+    def __init__ (self, network_file, tls, evaluation = "", congestion = [], congestion_level = "", num_vehicle = 20, num_demands = 200):
+        # 01 Define network_file
         self.network_file = network_file  # read the file
 
         self.net = sumolib.net.readNet(network_file)  # file -> net
@@ -27,7 +21,16 @@ class traffic_env:
         self.edges = [edge.getID() for edge in self.net.getEdges()]  # net -> edges (ID)
         self.state_space = self.nodes  # state_space
 
-        # 2. Define congestions edges with its original pattern
+        self.tls = tls
+
+
+        # 02 Define evaluation type
+        if evaluation not in ('distance', 'time'):
+            sys.exit('Error: Invalid evaluation type, provide only "distance" or "time"')
+        self.evaluation = evaluation
+
+
+        # 03 Define congestions edges with its original pattern
         if congestion:  # if congestion is defined
             self.congested_edges = [item[0] for item in congestion]
             self.congestion_duration = [item[1] for item in congestion]  # the duration of so called "traffic jam"
@@ -35,8 +38,6 @@ class traffic_env:
             for edge in self.congested_edges:  # make sure that all congested_edges are in the net
                 if edge not in self.edges:
                     sys.exit(f'Error: Invalid congestion_edges {edge}')
-            # print(f'Congested Edges: {list(zip(self.congested_edges, self.congestion_duration))}')
-            # print(f'Congested/Total: {len(self.congested_edges)}/{len(self.edges)}')
 
         else:  # if congestion is not defined, then set edges and its duration randomly
             if congestion_level == "low":
@@ -49,100 +50,87 @@ class traffic_env:
             self.congestion_duration = [random.randint(60, 120) for _ in range(len(self.congested_edges))]  # 1~2 min
 
 
-        # 3. Define evaluation type
-        if evaluation not in ('distance', 'time'):
-            sys.exit('Error: Invalid evaluation type, provide only "distance" or "time"')
-        self.evaluation = evaluation
 
-        # 4. Distribute vehicles in different place
+        # 04 Distribute vehicles in different place and reset their props
         self.num_vehicle = num_vehicle
         self.vehicle_states = []  # list[num_vehicle]
         self.timeline = []  # list[num_vehicle][current_time]
-        self.current_time = 0
-        self.reset()
+        self.asking_time = 0  # record the time demand give to us
+        self.waiting_counter = 0  # add busy_time and commute_time, i.e. summing up the time that every passenger is going to wait
+        self.reset()  # reset vehicle_states and timeline
 
-        # 5. Define demands
+        # 05 Define demands
         offset = 0
         self.num_demands = num_demands
-        self.demands = demand.Demand(network_file, offset, num_demands = self.num_demands)
-        self.demand_queue = []
-        self.current_demand = 0
+        self.demands = demand.Demand(network_file, tls, offset, num_demands = self.num_demands)
+        self.demand_queue = []  # record demands
+        self.demands_counter = 0
 
 
+        # 05 Print props of the network
+        print(f'Congested Edges: {list(zip(self.congested_edges, self.congestion_duration))}')
+        print(f'Congested/Total: {len(self.congested_edges)}/{len(self.edges)}')
 
 
-    # Initialise
+    # ----- Initialisation
+
     def reset (self):
         """
+        Initialise vehicle_states randomly and set timeline to 0 (in first column)
+
         Args:
-        - void
-
-        Returns:
+        - vehicle_states[num_vehicles]
+        - timeline[num_vehicles][seconds]
         """
-
         self.vehicle_states = random.choices(self.state_space, k = self.num_vehicle)
         self.timeline = [[] for _ in range(self.num_vehicle)]
         print(f'-- Initial vehicle states: {self.vehicle_states}\n')
 
 
-    #
+
     def get_congestion (self):
         """
+        Return the congestion edges and its duration for others to use in individual env
+
         Returns:
-            - congested_edges
+        - congestion (list[tuple(edge_id, int(minute))])
         """
         return list(zip(self.congested_edges, self.congestion_duration))
 
 
 
-    #
-    def is_empty (self):
-        """
-        if demand_queue = [], then return True
-
-        Returns:
-        - True/False
-        """
-        return self.current_demand == self.num_demands and self.demand_queue == []
-
-
+    # ----- Main function (following four functions form a pipeline executing "once" in every demand)
 
     #
     def update_demand_queue (self):
         """
+        Get the next demand and pop the oldest one to run
 
         Args:
         - demand(departure_time, start_node, end_node)
-        - timeline
+        - demand_queue
+        - asking_time
 
         Returns:
-        - demand_queue[-1]
+        - start_node (str): actually ID
+        - end_node (str)
         """
-        # 1. Pull demand
+        # 01 Pull demand
         self.demand_queue.append(self.demands.push())
-        self.current_demand += 1
+        self.demands_counter += 1
 
-        departure_time = self.demand_queue[-1][0]
+        self.asking_time = self.demand_queue[-1][0]
         start_node = self.demand_queue[-1][1]
         end_node = self.demand_queue[-1][2]
 
-        # 2. Update timeline
-        for _ in range(departure_time - self.current_time):
-            for vehicle in range(self.num_vehicle):
-                if len(self.timeline[vehicle]) < departure_time:
-                    self.timeline[vehicle].append(0)
-            # print('timeline update')
-            # for vehicle in range(self.num_vehicle):
-            #     print(f'{self.timeline[vehicle]}')
 
-        self.current_time = departure_time
+        print(f"-- Demand {self.demands_counter}: from '{start_node[0]}' to '{end_node[0]}")
 
 
-        # 3. Pop queue
-        self.demand_queue.pop(0)
+        # 02 Pop demand
+        self.demand_queue.pop()
 
 
-        print(f"-- Demand {self.current_demand}: from '{start_node[0]}' to '{end_node[0]}' at time {departure_time}")
         return start_node[0], end_node[0]
 
 
@@ -150,86 +138,148 @@ class traffic_env:
     #
     def get_neerest_vehicle (self, start_node):
         """
+        Get the nearest vehicle and the time it takes to go to the next demand
 
         Returns:
         - v_id
+        - commute_time: time that v_id taken to go to the next demand
         """
-        v_id = -1
 
-        distance_lst = {vehicle: float('inf') for vehicle in range(self.num_vehicle)}
-        print(distance_lst)
+        # 01 Define "time_lst" to record the time it spend for the current state to the target point
+        time_lst = {vehicle: float('inf') for vehicle in range(self.num_vehicle)}  # initialise to [inf, inf, inf, ...]
 
         for vehicle in range(self.num_vehicle):
             # Check if the vehicle is working
-            print_progress_bar(vehicle, self.num_vehicle-1, "Finding", "")
-            if self.current_time < len(self.timeline[vehicle]):
+            finding_bar = progressbar.ProgressBar(vehicle, self.num_vehicle-1, "Finding", "")
+            finding_bar.print()
+
+            if self.asking_time < len(self.timeline[vehicle]):
                 continue
 
-            # if the vehicle is idle
-            vehicle_node = self.vehicle_states[vehicle]
-
-            mock_env = environment.traffic_env(network_file = self.network_file, tls = [], evaluation="distance")
-            mock_agent = dijkstra.Dijkstra(mock_env, vehicle_node, start_node)  # not a agent actually
+            # Check if the vehicle is idle
+            mock_env = environment.traffic_env(network_file = self.network_file, tls = self.tls, evaluation="time")
+            mock_agent = dijkstra.Dijkstra(mock_env, self.vehicle_states[vehicle], start_node)  # not a agent actually
             _, edge_path = mock_agent.search()
-            distance_lst[vehicle] = mock_env.get_edge_distance(edge_path)
+
+            time_lst[vehicle] = mock_env.get_edge_time(edge_path)  # set to [XXX, XXX, inf, ...]. If inf ocuurs, corresponding vehicles are busy
 
 
-        print(distance_lst)
+        # 02 Use "time_lst" to distinguish which case the env is
+        # Case 1: All the vehicles are busy
+        if all(math.isinf(value) for value in time_lst.values()):
 
-        if min(distance_lst) < float('inf'):
-            v_id = min(distance_lst, key=lambda k: distance_lst[k])
+            # .01 Get which vehicle and when is it going to be available
+            available_time, v_id = min((len(row), index) for index, row in enumerate(self.timeline))
+
+            # .02 Get the time it spends from idle to the next demand point
+            mock_env = environment.traffic_env(network_file = self.network_file, tls = self.tls, evaluation="time")
+            mock_agent = dijkstra.Dijkstra(mock_env, self.vehicle_states[v_id], start_node)  # not a agent actually
+            _, edge_path = mock_agent.search()
+            commute_time = math.ceil(mock_env.get_edge_time(edge_path))
+
+            # .03 Set it to the busy time
+            busy_time = available_time - self.asking_time
+            self.waiting_counter += busy_time + commute_time
+
+            print(f'-- All vehicles are busy. After waiting, assigned vehicle id: {v_id}')
+
+        # Case 2: Some vehicles are available
+        else:
+
+            # .01 Get which vehicle and when is it going to be available
+            v_id = min(time_lst, key=lambda k: time_lst[k])
+
+            # .02 Get the time it spends from idle to the next demand point
+            mock_env = environment.traffic_env(network_file = self.network_file, tls = self.tls, evaluation="time")
+            mock_agent = dijkstra.Dijkstra(mock_env, self.vehicle_states[v_id], start_node)  # not a agent actually
+            _, edge_path = mock_agent.search()
+            commute_time = math.ceil(mock_env.get_edge_time(edge_path))
+
+            # .03 Set it to the busy time
+            busy_time = 0
+            self.waiting_counter += commute_time
+
+            print(f'\n-- Assigned vehicle id: {v_id}')
 
 
-        print(f'\n-- Assigned vehicle id: {v_id}\n')
-        return v_id
+
+        # 03 Update idle timeline
+        self.update_idle_timeline()
+
+
+        print(f"-- Departure time {self.asking_time + busy_time + commute_time} (asking time: {self.asking_time} + commuting time: {commute_time})\n")
+
+
+        return v_id, commute_time
+
+
+
+
+    def update_idle_timeline (self):
+        """
+        Insert 0 to the idle timeline until the asking_time
+
+        Args:
+        - timeline[num_vehicle][seconds]
+        """
+        for vehicle in range(self.num_vehicle):
+            while len(self.timeline[vehicle]) < self.asking_time:
+                self.timeline[vehicle].append(0)
+
 
 
 
     #
-    def set_vehicle_working (self, v_id, working_time):
+    def set_vehicle_working (self, v_id, commute_time, working_time, end_node):
         """
+        Insert 0.5 to the timeline for commute_time and 1 for working_time
 
-        Returns:
-        - void
+        Args:
+        - timeline[num_vehicle][seconds]
         """
+        for _ in range(commute_time):
+            self.timeline[v_id].append(0.5)
+
         for _ in range(working_time):
             self.timeline[v_id].append(1)
 
+        self.vehicle_states[v_id] = end_node
 
+
+
+
+
+    # ----- print result
 
 
     #
     def fill_timeline (self):
         """
+        Fill the timeline with 0 to make it a rectangle
 
         Args:
-        - void
-
-        Returns:
-        - void
+        - timeline[num_vehicle][seconds]
         """
         max_length = max(len(row) for row in self.timeline)
         self.timeline = [row + [0] * (max_length - len(row)) for row in self.timeline]
 
 
 
-    # def set_plot_visualised_result (self, node_path, edge_path):
-    #     """
-    #
-    #     Args:
-    #     - node_path: [num_demands]
-    #     - edge_path: [num_demands]
-    #
-    #     Returns:
-    #     - Graph
-    #     """
+    # print result
+    def print_result (self):
+        """
+        Print the result of the simulation
+        """
+        max_length = max(len(row) for row in self.timeline)
 
+        print(f'-- Total Time: {round(max_length/60, 2)} min')
+        print(f'-- Average Waiting Time: {round(self.waiting_counter/self.num_demands/60, 2)} min')
 
 
     #
     def plot_gantt (self):
         """
-
+        Plot the gantt chart of the simulation
         """
         self.fill_timeline()
         plt.imshow(self.timeline, cmap='Greys', aspect='auto', interpolation='nearest')
@@ -239,11 +289,11 @@ class traffic_env:
         plt.show()
 
 
-
     #
-    def get_total_time (self):
+    def plot_visualised_result (self, node_path, edge_path):
         """
 
         """
-        max_length = max(len(row) for row in self.timeline)
-        return max_length
+        print(node_path)
+        print(edge_path)
+        # nx
