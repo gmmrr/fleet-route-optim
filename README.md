@@ -1,25 +1,43 @@
-# Routing Optimization in Traffic Network using Reinforcement Learning
+# fleet-route-optim
+
+## Description
+This project aims to solve the route optimisation problem among vehicles in a fleet by reinforcement learning.<br>
+
+Giving a group of vehicles and a serial of demands, it can assign a particular vehicle to deal with it intuitively, and each of them will follow the route computed by RL.<br>
+
+The performance of RL for each episodes executed in this project can be found in github.com/gmmrr/route-optim, which is an individual version of this repo.<br>
+
+This repo is part of Guanming's capstone project.
+
+## Result
+
+
 
 ## Project Scope
+1. **Demands are randomly generated**<br>
+    The prediction of next demand is quite a issue, but it is really hard to get the real situation near NCKU. There is a dataset called ```Cabspotting```(a cab data revealed by Scott Snibbe from San Francisco) on which lots of related researches is based.
+    
+2. **Congestion is randomly generated**<br>
+    Similar to mentioned situation above. It is randomly chosen from edges space, and it can be defined in ```fleet_environment.py``` to low, medium, or high level.
 
-As there are multiple factors involved in selecting the most optimal route, below are the factors that have been preset for this study:
-- Traffic network is not updated in real-time
-- Vehicle Speed is constant at 80 km/hr
+3. **Speed is a constant**<br>
+    Net downloaded from OSM website helps classify the edge type, like primary, secondary, residential highway. Each of them has a defined speed. In this project, we don't take acceleration into consideration. Thus, it seems like to be far away from the practical case.
 
-## Method of Evaluation
+4. **Traffic light is set in a 90 seconds interval**<br>
+    Even if it is close to the practical case, it is still not real. They are set as a program rather than a constant pattern in reality.
 
-1. Comparision of the routes selected from the agent vs the baseline model (Dijkstra) 
-2. Evaluate if the models managed to converge
-3. Comparision of the number of episodes taken to converge (SARSA vs Q_Learning)
-4. Comparision of the time taken for the computation
+5. **The terminal condition of RL**<br>
+    It is set that convergence occurs when time taken (round to the second decimal place) in 5 episodes is consistent.
 
-## Setup 
+6. **Performance issue**<br>
+    Due to the performance issue, part of simulation is implemented by Dijkstra algorithm. Even if so, the most important part, that is, route optimisation is still implemented by RL.
 
+## Setup
 1. Download SUMO (https://sumo.dlr.de/docs/Downloads.php)
 2. Clone this repository to your local machine
 3. Install the necessary packages by following operations:
 ```python
-pip3 install -r requirements.txt
+$ pip3 install -r requirements.txt
 ```
 4. Update the main.py with your SUMO directory to set the environment variable
 ```python
@@ -29,43 +47,61 @@ def sumo_config():
 ```
 5. Upload your netedit file and update the network_file variable
 ```python
-network_file = './network_files/2x3_network.net.xml'
+network_file = './network_files/ncku_network.net.xml'
 ```
-**More on Netedit:** https://sumo.dlr.de/docs/Netedit/index.html 
+More on **OSM website**: https://www.openstreetmap.org/ <br>
+Config command is saved in ```./network_files/config.txt```
 
-6. Edit following parameters as part of environment
+6. Upload your traffic_light file
 ```python
-env = environment.traffic_env(
-    network_file = network_file,
-    congestion = congestion,
-    traffic_light = traffic_light,
-    evaluation = "time", # Type: "destination" | "time"
-    congestion_level = "low",  # Type: "low" | "medium" | "high", only applied if the congestion is not defined
-    travel_speed = 80  # Type: number
-)
+tls = tls_from_tllxml('./network_files/ncku_network.tll.xml')
 ```
-7. Run the code
+This file can be converted by **Netedit**, more on https://sumo.dlr.de/docs/Netedit/index.html
+
+7. Edit following parameters as part of environment in ```main.py```
+```python
+# 03 Initiate Environment
+...
+num_vehicle = 20
+evaluation = "time"
+num_demands = 200
+congestion_assigned = []  # Type: ["edge_id", int(minute)] It will be defined randomly if not customised
+...
+```
+8. Run the code
 ```terminal
 $ python3 main.py
 ```
 
-## Test Cases
+## Customisable Section
+1. In ```main.py```, we can set
+   ```python
+    num_vehicle = 20
+    evaluation = "time"
+    num_demands = 200
+    congestion_assigned = []
+   ```
+2. In ```agent.py```, we can set
+   ```python
+    # Hyperparameters for Q_Learning
+    learning_rate = 0.9  # alpha
+    discount_factor = 0.1  # gamma
 
-### Test Case 1 - Ideal Reward Function
+    # Hyperparameters for SARSA
+    learning_rate = 0.9  # alpha
+    discount_factor = 0.1  # gamma
+    exploration_rate = 0.05  # ratio of exploration and exploitation
+   ```
+   and we have
+   ```python
+    reward_lst = [-100, -100, -100, 10, 100, -1]
+   ```
+   They are defined as below respectively.
+   * invalid_action_reward
+   * dead_end_reward 
+   * loop_reward 
+   * completion_reward  
+   * bonus_reward  
+   * continue_reward
 
-### Test Case 2 - Traffic Density
 
-## Graph Plotting
-
-1. **Route Map**: In `main.py`, the function below maps the routes produced. 
-```python
-env.visualise_plot(edge_path)
-```
-
-2. **Performance Plot**: In `main.py`, the function below creates a line plot on the performance of each episode. This is also the learning curve of the model.
-```python
-env.plot_performance(number_of_episode, logs)
-```
-
-
-RL的終止條件是如果5次次數一樣
