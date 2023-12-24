@@ -5,7 +5,7 @@ This project aims to solve the route optimisation problem among vehicles in a fl
 
 Giving a group of vehicles and a serial of demands, it can assign a particular vehicle to deal with it intuitively, and each of them will follow the route computed by RL.<br>
 
-The performance of RL for each episodes executed in this project can be found in github.com/gmmrr/route-optim, which is an individual version of this repo.<br>
+The performance of RL for each episodes executed in this project can be found in <a href="https://github.com/gmmrr/route-optim">gmmrr/route-optim<a/>, which is an individual version of this repo.<br>
 
 This repo is part of Guanming's capstone project.
 
