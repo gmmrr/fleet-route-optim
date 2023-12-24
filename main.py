@@ -127,10 +127,8 @@ if __name__ == '__main__':
         # Decide who to work
         v_id, commute_time = fleet_env.get_neerest_vehicle(start_node)
 
-        # QLearning_agent = agent.Q_Learning(env, start_node, end_node)
-        # _, edge_path, _, _ = QLearning_agent.train(5000, 5)  # limit of episodes, threshold to converge
-        Dijkstra = dijkstra.Dijkstra(env, start_node, end_node)
-        node_path, edge_path = Dijkstra.search()
+        QLearning_agent = agent.Q_Learning(env, start_node, end_node)
+        node_path, edge_path, _, _ = QLearning_agent.train(5000, 5)  # limit of episodes, threshold to converge
         working_time = math.ceil(env.get_edge_time(edge_path))
 
         fleet_env.set_vehicle_working(v_id, commute_time, working_time, end_node)  # it will stop automatically

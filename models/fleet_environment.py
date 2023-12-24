@@ -69,7 +69,7 @@ class traffic_env:
 
         # 05 Print props of the network
         print(f'Congested Edges: {list(zip(self.congested_edges, self.congestion_duration))}')
-        print(f'Congested/Total: {len(self.congested_edges)}/{len(self.edges)}')
+        print(f'Congested/Total: {len(self.congested_edges)}/{len(self.edges)}\n')
 
 
     # ----- Initialisation
@@ -294,6 +294,47 @@ class traffic_env:
         """
 
         """
-        print(node_path)
-        print(edge_path)
-        # nx
+
+        nodes_dict = {}  # a list of x_coord and y_coord of every nodes
+        for node in self.nodes:
+            x_coord, y_coord = self.net.getNode(node).getCoord()
+            nodes_dict[node] = (x_coord, y_coord)
+
+        edges_dict = {}  # a list of from_point and to_point of every edges
+        for edge in self.edges:
+            from_id = self.net.getEdge(edge).getFromNode().getID()
+            to_id = self.net.getEdge(edge).getToNode().getID()
+            edges_dict[edge] = (from_id, to_id)
+
+        # Draw the network layout
+        net_G = nx.Graph()
+        for edge in edges_dict:
+            net_G.add_edge(edges_dict[edge][0], edges_dict[edge][1])
+        pos = {node: nodes_dict[node] for node in nodes_dict}
+        nx.draw(
+            net_G, pos, with_labels=False,
+            node_color='DimGray', node_size=10,
+            edge_color='DarkGray'
+        )
+
+        # Draw the selected route
+        for i in range(len(edge_path)):
+            route_G = nx.Graph()
+            for edge in edge_path[i]:
+                route_G.add_edge(edges_dict[edge][0], edges_dict[edge][1])
+            nx.draw(
+                route_G, pos, with_labels=False,
+                node_color=f'C{i}', node_size=30,
+                edge_color=f'C{i}', width=3,
+                arrows=True, arrowsize=7, arrowstyle='-|>'
+            )
+
+        # Draw traffic light nodes and congested edges in time evaluation
+        if self.evaluation in ("time"):
+            congested_lst = [edges_dict[edge] for edge in self.congested_edges]  # congested edges
+            nx.draw_networkx_edges(
+                net_G, pos,
+                edgelist=congested_lst, edge_color='Gold', width=3
+            )
+
+        plt.show()
