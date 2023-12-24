@@ -14,7 +14,13 @@ Given that there are 20 vehicles, and 200 demands are randomly generated with 10
 
 The visualised result is in the plot below:<br>
 <img width="590" alt="Screenshot 2023-12-24 at 21 21 49" src="https://github.com/gmmrr/fleet-route-optim/assets/88712124/ecc84a08-9ff7-4a5d-8e0d-5167c2b19945"><br>
-where the grey part showcases the duration that the vehicle is commuting, and the black part showcases the duration that the vehicle is on duty.
+where the grey part showcases the duration that the vehicle is commuting, and the black part showcases the duration that the vehicle is on duty.<br>
+
+These demands are consumed as below:<br>
+```
+-- Total Time: 69.58 min
+-- Average Waiting Time: 0.58 min
+```
 
 
 ## Project Scope
