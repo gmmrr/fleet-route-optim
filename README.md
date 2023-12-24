@@ -10,12 +10,16 @@ The performance of RL for each episodes executed in this project can be found in
 This repo is part of Guanming's capstone project.
 
 ## Result
+Given that there are 20 vehicles, and demands are randomly generated with 10 ~ 30 seconds intervals.<br>
 
+The visualised result is in the plot below:<br>
+<img width="590" alt="Screenshot 2023-12-24 at 21 21 49" src="https://github.com/gmmrr/fleet-route-optim/assets/88712124/ecc84a08-9ff7-4a5d-8e0d-5167c2b19945"><br>
+where the grey part showcases the duration that the vehicle is commuting, and the black part showcases the duration that the vehicle is on duty.
 
 
 ## Project Scope
 1. **Demands are randomly generated**<br>
-    The prediction of next demand is quite a issue, but it is really hard to get the real situation near NCKU. There is a dataset called ```Cabspotting```(a cab data revealed by Scott Snibbe from San Francisco) on which lots of related researches is based.
+    The prediction of next demand is quite a issue, but it is really hard to get the real situation near NCKU. There is a dataset called ```Cabspotting``` (a cab data revealed by Scott Snibbe from San Francisco) on which lots of related researches is based.
     
 2. **Congestion is randomly generated**<br>
     Similar to mentioned situation above. It is randomly chosen from edges space, and it can be defined in ```fleet_environment.py``` to low, medium, or high level.
@@ -96,12 +100,6 @@ $ python3 main.py
    ```python
     reward_lst = [-100, -100, -100, 10, 100, -1]
    ```
-   They are defined as below respectively.
-   * invalid_action_reward
-   * dead_end_reward 
-   * loop_reward 
-   * completion_reward  
-   * bonus_reward  
-   * continue_reward
+   They are defined as ```[invalid_action_reward, dead_end_reward, loop_reward, completion_reward, bonus_reward, continue_reward]``` respectively.
 
 
